@@ -105,11 +105,11 @@ PhasesMonitoring::PhasesMonitoring() : toggleCount(0), interruptCount(0){
 		OVFCount[i] = 0;
 		preTimestamp[i] = 0;
 		startCount[i] = STARTUP_COUNT;
-		double R[2] = {0.000005, -1};
-		phaseKalman[0] = new Kalman(0.000001, R, 0, 1.0);
-		phaseKalman[1] = new Kalman(0.000001, R, 0, 1.0);
-		phaseKalman[2] = new Kalman(0.000001, R, 0, 1.0);
-		phaseKalman[3] = new Kalman(0.000001, R, 0, 1.0);
+		float R[2] = {0.000005f, -1};
+		phaseKalman[0] = new Kalman(0.000001f, R, 0, 1.0f);
+		phaseKalman[1] = new Kalman(0.000001f, R, 0, 1.0f);
+		phaseKalman[2] = new Kalman(0.000001f, R, 0, 1.0f);
+		phaseKalman[3] = new Kalman(0.000001f, R, 0, 1.0f);
 //		phaseAverage[0] = new MovingWindowAverageFilter(5);
 //		phaseAverage[1] = new MovingWindowAverageFilter(5);
 //		phaseAverage[2] = new MovingWindowAverageFilter(5);

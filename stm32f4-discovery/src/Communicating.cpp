@@ -17,6 +17,8 @@
 #include <MathTools.h>
 #include <Task.h>
 #include <inttypes.h>
+#include <SE3.h>
+#include <Leds.h>
 
 Communicating* _mCommunicating;
 
@@ -158,7 +160,8 @@ void Communicating::Execute(int cmd, float data){
 				PWM::getInstant()->Control(i, 0);
 			}
 			Quaternion::getInstance()->resetQuaternion();
-
+			PX4FLOW::getInstance()->reset();
+			SE3::getInstance()->reset();
 			Controlling::getInstant()->setTarget(0, 0);
 			Controlling::getInstant()->setTarget(1, 0);
 			Controlling::getInstant()->setTarget(2, 0);
@@ -182,7 +185,7 @@ void Communicating::Execute(int cmd, float data){
 			Communicating::getInstant()->RFSend(4, data);
 			break;
 		case CMD::PRINT_MODE:
-			if(PrintType++ == 6){
+			if(PrintType++ == 8){
 				PrintType = 0;
 			}
 			Communicating::getInstant()->RFSend(4, PrintType);
@@ -290,6 +293,9 @@ void Communicating::Execute(int cmd, float data){
 			Pid::getInstance(6)->setPid(Pid::getInstance(6)->getPid(0),data,Pid::getInstance(5)->getPid(2));
 			Pid::getInstance(7)->setPid(Pid::getInstance(7)->getPid(0),data,Pid::getInstance(5)->getPid(2));
 			Communicating::getInstant()->RFSend(4, data);
+			break;
+		case CMD::SWITCH_LIGHT:
+			Leds::getInstance()->Toggle(Leds::LED4);
 			break;
 	}
 

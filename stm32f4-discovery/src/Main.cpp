@@ -103,9 +103,17 @@ void RFOutput(){
 			Communicating::getInstant()->RFSend(1, (float)Acceleration::getInstance()->getFilteredAngle(1));
 			break;
 		case 6:
-			Communicating::getInstant()->RFSend(0, (float)(SE3::getInstance()->getPos())(0));
-			Communicating::getInstant()->RFSend(1, (float)(SE3::getInstance()->getPos())(1));
-			Communicating::getInstant()->RFSend(2, (float)(SE3::getInstance()->getPos())(2));
+			Communicating::getInstant()->RFSend(0, (float)((SE3::getInstance()->getPos())(0)*100.0));
+			Communicating::getInstant()->RFSend(1, (float)((SE3::getInstance()->getPos())(1)*100.0));
+			Communicating::getInstant()->RFSend(2, (float)((SE3::getInstance()->getPos())(2)*100.0));
+			break;
+		case 7:
+			Communicating::getInstant()->RFSend(0, (float)(PX4FLOW::getInstance()->getTranslation())(0)*100.0);
+			Communicating::getInstant()->RFSend(1, (float)(PX4FLOW::getInstance()->getTranslation())(1)*100.0);
+			Communicating::getInstant()->RFSend(2, (float)(PX4FLOW::getInstance()->getTranslation())(2)*100.0);
+			break;
+
+		case 8:
 			break;
 	}
 }
@@ -116,6 +124,7 @@ void BatteryPrint(){
 
 void Output(){
 
+	UKF::printVect("pos", 0, SE3::getInstance()->getPos());
 //	Usart::getInstance(USART1)->Print("$,%g,%g,%g,%g,%g\n", MathTools::RadianToDegree(Quaternion::getInstance()->getEuler(0)),
 //			MathTools::RadianToDegree(Quaternion::getInstance()->getEuler(1)),
 //			MathTools::RadianToDegree(Quaternion::getInstance()->getEuler(2)),
@@ -127,34 +136,34 @@ void Output(){
 //			MathTools::RadianToDegree(Acceleration::getInstance()->getAngle(1)));
 
 
-	switch(Communicating::getInstant()->getPrintType()){
-		case 0:
-			Usart::getInstance(USART1)->Print("$,%g,%g,%g\n", MathTools::RadianToDegree(Quaternion::getInstance()->getEuler(0)),
-					MathTools::RadianToDegree(Quaternion::getInstance()->getEuler(1)),
-					MathTools::RadianToDegree(Quaternion::getInstance()->getEuler(2)));
-			break;
-		case 1:
-			Usart::getInstance(USART1)->Print("$,%g,%g,%g,%g\n", PhasesMonitoring::getInstance()->getRPM(0),
-					PhasesMonitoring::getInstance()->getRPM(1),
-					PhasesMonitoring::getInstance()->getRPM(2),
-					PhasesMonitoring::getInstance()->getRPM(3));
-			break;
-		case 2:
-			Usart::getInstance(USART1)->Print("$,%g,%g,%g\n", Acceleration::getInstance()->getAcc(0),
-					Acceleration::getInstance()->getAcc(1),
-					Acceleration::getInstance()->getAcc(2));
-			break;
-		case 3:
-			Usart::getInstance(USART1)->Print("$,%g,%g,%g\n", Acceleration::getInstance()->getAcc(0),
-					Acceleration::getInstance()->getMovingAverageFilter(1)->getAverage(),
-					Acceleration::getInstance()->getMovingAverageFilter(2)->getAverage());
-			break;
-		case 4:
-				Usart::getInstance(USART1)->Print("$,%g,%g,%g\n", Omega::getInstance()->getOmega(0),
-				Omega::getInstance()->getOmega(1),
-				Omega::getInstance()->getOmega(2));
-			break;
-	}
+//	switch(Communicating::getInstant()->getPrintType()){
+//		case 0:
+//			Usart::getInstance(USART1)->Print("$,%g,%g,%g\n", MathTools::RadianToDegree(Quaternion::getInstance()->getEuler(0)),
+//					MathTools::RadianToDegree(Quaternion::getInstance()->getEuler(1)),
+//					MathTools::RadianToDegree(Quaternion::getInstance()->getEuler(2)));
+//			break;
+//		case 1:
+//			Usart::getInstance(USART1)->Print("$,%g,%g,%g,%g\n", PhasesMonitoring::getInstance()->getRPM(0),
+//					PhasesMonitoring::getInstance()->getRPM(1),
+//					PhasesMonitoring::getInstance()->getRPM(2),
+//					PhasesMonitoring::getInstance()->getRPM(3));
+//			break;
+//		case 2:
+//			Usart::getInstance(USART1)->Print("$,%g,%g,%g\n", Acceleration::getInstance()->getAcc(0),
+//					Acceleration::getInstance()->getAcc(1),
+//					Acceleration::getInstance()->getAcc(2));
+//			break;
+//		case 3:
+//			Usart::getInstance(USART1)->Print("$,%g,%g,%g\n", Acceleration::getInstance()->getAcc(0),
+//					Acceleration::getInstance()->getMovingAverageFilter(1)->getAverage(),
+//					Acceleration::getInstance()->getMovingAverageFilter(2)->getAverage());
+//			break;
+//		case 4:
+//				Usart::getInstance(USART1)->Print("$,%g,%g,%g\n", Omega::getInstance()->getOmega(0),
+//				Omega::getInstance()->getOmega(1),
+//				Omega::getInstance()->getOmega(2));
+//			break;
+//	}
 
 
 //	printf("$,%g,%g,%g,", MathTools::RadianToDegree(Quaternion::getInstance()->getEuler(0)),
@@ -235,12 +244,10 @@ void initUpdate(){
 }
 
 void ReceiveTask(){
-
 	Communicating::getInstant()->ReceivePoll();
 }
 
 void SendTask(){
-
 	Communicating::getInstant()->SendPoll();
 }
 
@@ -458,28 +465,30 @@ int main(){
 	Battery mBattery;
 	Usart mUsart3(USART3, 115200);
 	Usart::setPrintUsart(USART3);
-//	printf("\n\nStarted!\n\n");
+	mLeds.LedsControl(mLeds.LED3, true);
 	Communicating mCommunicating(USART3, false);
 	Controlling mControlling;
 	I2C* mI2C1 = new I2C(I2C1, I2C::SPEED_400K);
 	I2C* mI2C2 = new I2C(I2C2, I2C::SPEED_400K);
-	PX4FLOW(I2C1, 0.002);
 	MPU6050 mMPU6050(0.002);
 	Acceleration mAcceleration;
 	Omega mOmega;
 	Quaternion mQuaternion(0.002);
+	PX4FLOW(I2C1, 0.006);
 	SE3* mSE3 = new SE3();
 
 	Delay::DelayMS(100);
+	mLeds.LedsControl(Leds::LED4, true);
 	mLeds.Blink(100, Leds::LED1, true);
 	mTask.Attach(2, 0, initUpdate, false, 128);
 	mTask.Run();
 //
 	mTask.Attach(2, 0, Update, true, -1);
-	mTask.Attach(17, 7, UpdatePX4FLOW, true, -1);
-	mTask.Attach(20, 3, ReceiveTask, true, -1);
-	mTask.Attach(20, 11, SendTask, true, -1);
-	mTask.Attach(150, 53, RFOutput, true, -1);
+	mTask.Attach(6, 1, UpdatePX4FLOW, true, -1);
+	mTask.Attach(40, 3, ReceiveTask, true, -1);
+	mTask.Attach(40, 17, SendTask, true, -1);
+	mTask.Attach(200, 61, RFOutput, true, -1);
+//	mTask.Attach(100, 41, Output, true, -1);
 //	mTask.Attach(100, 61, printTaskDuration, true, -1);
 //	mTask.Attach(100, 0, Testing, true, -1);
 //	mTask.Attach(500, 0, MTest, true, -1);

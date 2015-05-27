@@ -26,21 +26,27 @@ void SE3::printVect(char* ch, int index,  Vector4d x){
 
 SE3::SE3(){
 	_mSE3 = this;
+	prevTranslation.setZero();
 	_SE3.setIdentity();
 	_pos.setZero();
 	_pos(3) = 1;
 	pos.setZero();
-	Vector3d x;
-	Matrix3d p;
-	Matrix3d q;
-	Matrix3d r;
+	prevTranslation.setZero();
+	Vector3f x;
+	Matrix3f p;
+	Matrix3f q;
+	Matrix3f r;
 	x.setZero();
 	p.setIdentity();
 	q.setIdentity();
 	r.setIdentity();
-	q*=0.0001;
-	r*=0.1;
+	q*=0.0001f;
+	r*=0.01f;
 	SE3UKF = new UKF(x, p, q, r);
+//	float r[2] = {0.1f, -1};
+//	SE3Kalman[0] = new Kalman(0.0001f, r, 0, 1.0);
+//	SE3Kalman[1] = new Kalman(0.0001f, r, 0, 1.0);
+//	SE3Kalman[2] = new Kalman(0.0001f, r, 0, 1.0);
 }
 
 SE3* SE3::getInstance(){
@@ -48,46 +54,100 @@ SE3* SE3::getInstance(){
 }
 
 void SE3::Update(){
-	Vector3d x[7];
-	Vector3d z[7];
-	Vector4d temp;
-	SE3UKF->getSigmaPoints(x);
-	for(int i = 0; i < 7; i++){
-//		UKF::getInstance()->printVect("x[i]", i, x[i]);
+//	Vector3f z[7];
+//	Vector4d temp;
+//	for(int i = 0; i < 7; i++){
+////		UKF::getInstance()->printVect("x[i]", i, x[i]);
+//		for(int j = 0; j < 3; j++){
+//			temp(j) = x[i](j);
+//		}
+//		temp(3) = 1.0;
+//		temp = _SE3 * temp;
+//		for(int j = 0; j < 3; j++){
+//			z[i](j) = temp(j);
+//		}
+////		UKF::getInstance()->printVect("z[i]", i, z[i]);
+//	}
+
+	Matrix4d deltaSE3;
+	deltaSE3.setIdentity();
+	Matrix3f deltaRotation = Quaternion::getInstance()->getDeltaRotationMatrix();
+	for(int i = 0; i < 3; i++){
 		for(int j = 0; j < 3; j++){
-			temp(j) = x[i](j);
+			deltaSE3(i,j) = deltaRotation(i,j);
 		}
-		temp(3) = 1.0;
-		temp = _SE3 * temp;
-		for(int j = 0; j < 3; j++){
-			z[i](j) = temp(j);
-		}
-//		UKF::getInstance()->printVect("z[i]", i, z[i]);
 	}
 
-	Matrix3d Rotation = Quaternion::getInstance()->getRotationMatrix();
+	Vector3f Translation = PX4FLOW::getInstance()->getTranslation();
 	for(int i = 0; i < 3; i++){
-		for(int j = 0; j < 3; j++){
-			_SE3(i,j) = Rotation(i,j);
-		}
+		deltaSE3(i,3) = Translation(i);
 	}
-	Vector3d Translation = PX4FLOW::getInstance()->getTranslation();
-	for(int i = 0; i < 3; i++){
-		_SE3(i,3) = Translation(i);
-	}
+//	printMat("deltaSE3", 0, deltaSE3);
+//	printf("N: %g\n", deltaSE3.norm());
+//	printMat("SE3", 0, _SE3);
+//	printf("N: %g\n", _SE3.norm());
+	_SE3 = deltaSE3;
+
+//	printMat("SE3", 1, _SE3);
+//	printf("N: %g\n", _SE3.norm());
+//	UKF::printMat("R", 0, Quaternion::getInstance()->getRotationMatrix());
+//	printVect("_pos", 0, _pos);
 	_pos = _SE3 * _pos;
+//	printVect("_pos", 1, _pos);
+//	printMat("deltaR", 0, deltaSE3);
+//	printMat("SE3", 1, deltaSE3 * _SE3);
+
 	for(int i = 0; i < 3; i++){
 		pos(i) = _pos(i);
 	}
-//	UKF::getInstance()->printVect("pos", 0, pos);
-//	pos = SE3UKF->Filtering(x,z,pos);
-//	UKF::getInstance()->printVect("pos", 1, pos);
+//	UKF::printVect("pos", 0, pos);
+	Vector3f x[7];
+	SE3UKF->getSigmaPoints(x);
+	pos = SE3UKF->Filtering(x,x,pos);
+//	SE3Kalman[0]->Filtering(&pos(0), pos(0), 0);
+//	SE3Kalman[1]->Filtering(&pos(1), pos(1), 0);
+//	SE3Kalman[2]->Filtering(&pos(2), pos(2), 0);
+
+
+
+	for(int i = 0; i < 3; i++){
+		_pos(i) = pos(i);
+	}
+//	printVect("_pos", 0, _pos);
+//	UKF::printVect("pos", 0, pos);
+
 }
 
-Vector3d SE3::getPos(){
+Vector3f SE3::getPos(){
 	return pos;
 }
 
 Matrix4d SE3::getSE3(){
 	return _SE3;
+}
+
+void SE3::reset(){
+
+	prevTranslation.setZero();
+	_SE3.setIdentity();
+	_pos.setZero();
+	_pos(3) = 1;
+	pos.setZero();
+	prevTranslation.setZero();
+	Vector3f x;
+	Matrix3f p;
+	Matrix3f q;
+	Matrix3f r;
+	x.setZero();
+	p.setIdentity();
+	q.setIdentity();
+	r.setIdentity();
+	q*=0.0001f;
+	r*=0.01f;
+	delete SE3UKF;
+	SE3UKF = new UKF(x, p, q, r);
+//	float r[2] = {0.1f, -1};
+//	SE3Kalman[0] = new Kalman(0.0001f, r, 0, 1.0);
+//	SE3Kalman[1] = new Kalman(0.0001f, r, 0, 1.0);
+//	SE3Kalman[2] = new Kalman(0.0001f, r, 0, 1.0);
 }
